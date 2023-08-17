@@ -16,7 +16,7 @@ on:
 env:
   IMAGE_DIR: ./pyenv_rust_powershell
   IMAGE_NAME: ghcr.io/${{ github.repository }}/pyenv_rust_powershell
-  IMAGE_TAG: v1
+  IMAGE_TAG: v2
   IMAGE_ARCHS: linux/arm,linux/arm64
 
 jobs:

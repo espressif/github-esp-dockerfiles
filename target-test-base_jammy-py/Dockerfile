@@ -59,4 +59,15 @@ RUN : \
 # Copy Python binaries, libraries, includes, and virtualenv from the build-python stage
 COPY --from=build-python /usr/local/ /usr/local/
 
+# Update the dynamic linker run-time bindings (Python shared libraries are not in the default search path)
+RUN ldconfig
+
+# This prefers the Espressif pypi wheel registry (https://dl.espressif.com/pypi/) over the public PyPI (fallback)
+RUN pip install --upgrade pip
+ENV PIP_INDEX_URL=https://dl.espressif.com/pypi/
+ENV PIP_EXTRA_INDEX_URL=https://pypi.org/simple
+
+# Prioritize using binary (wheel) packages over source packages for faster installations and to avoid unnecessary compilations.
+ENV PIP_PREFER_BINARY=true
+
 CMD [ "/bin/bash" ]

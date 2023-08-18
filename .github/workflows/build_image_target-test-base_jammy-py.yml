@@ -44,24 +44,39 @@ env:
   IMAGE_ARCHS: linux/amd64,linux/arm
 
 jobs:
+  setup-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+    - name: Set Matrix
+      id: set-matrix
+      run: |
+        matrix='["3.8.17"]'
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          if [ "${{ github.event.inputs.python_3_9_17 }}" = "true" ]; then
+            matrix=$(echo $matrix | jq ' . + ["3.9.17"] ')
+          fi
+          if [ "${{ github.event.inputs.python_3_10_12 }}" = "true" ]; then
+            matrix=$(echo $matrix | jq ' . + ["3.10.12"] ')
+          fi
+          if [ "${{ github.event.inputs.python_3_11_4 }}" = "true" ]; then
+            matrix=$(echo $matrix | jq ' . + ["3.11.4"] ')
+          fi
+        fi
+        echo $matrix
+        echo "::set-output name=matrix::$matrix"
+      shell: bash
+
+
   build-and-push-docker-image:
+    needs: setup-matrix
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python_version: ["3.8.17", "3.9.17", "3.10.12", "3.11.4"]
-        include:
-          - python_version: "3.8.17"
-            build_this_version: true
-          - python_version: "3.9.17"
-            build_this_version: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.python_3_9_17 == 'true' }}
-          - python_version: "3.10.12"
-            build_this_version: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.python_3_10_12 == 'true' }}
-          - python_version: "3.11.4"
-            build_this_version: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.python_3_11_4 == 'true' }}
-
+        python_version: ${{fromJson(needs.setup-matrix.outputs.matrix)}}
     steps:
       - name: Checkout Repository
-        if: matrix.build_this_version
         uses: actions/checkout@v2
 
       - name: Extract Major/Minor Version from Full Version
@@ -98,7 +113,6 @@ jobs:
             buildx-${{ matrix.python_version }}-
 
       - name: Build and Push Docker Image
-        if: matrix.build_this_version
         uses: docker/build-push-action@v2
         with:
           context: ${{ env.IMAGE_DIR }}

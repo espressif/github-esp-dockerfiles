@@ -13,16 +13,30 @@ on:
   workflow_dispatch:
     inputs:
       python_3_8_17:
-        description: 'Python 3.8.17'
+        description: 'Build Ubuntu 22.04 (Jammy) with Python 3.8.17'
         required: false
         type: boolean
         default: true
       python_3_9_17:
-        description: 'Python 3.9.17'
+        description: 'Build Ubuntu 22.04 (Jammy) with Python 3.9.17'
         required: false
         type: boolean
         default: false
-      # Add more versions as needed...
+      python_3_10_12:
+        description: 'Build Ubuntu 22.04 (Jammy) with Python 3.10.12'
+        required: false
+        type: boolean
+        default: false
+      python_3_11_4:
+        description: 'Build Ubuntu 22.04 (Jammy) with Python 3.11.4'
+        required: false
+        type: boolean
+        default: false
+
+# Kill running actions pipeline (for PR) when new changes are pushed to PR
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 env:
   IMAGE_DIR: ./target-test-base_jammy-py
@@ -34,12 +48,16 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python_version: ["3.8.17", "3.9.17"] # Add more versions as needed.
+        python_version: ["3.8.17", "3.9.17", "3.10.12", "3.11.4"]
         include:
           - python_version: "3.8.17"
-            build_this_version: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.python_3_8_17 == 'true' || github.event_name != 'workflow_dispatch' }}
+            build_this_version: true
           - python_version: "3.9.17"
-            build_this_version: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.python_3_9_17 == 'true' || github.event_name != 'workflow_dispatch' }}
+            build_this_version: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.python_3_9_17 == 'true' }}
+          - python_version: "3.10.12"
+            build_this_version: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.python_3_10_12 == 'true' }}
+          - python_version: "3.11.4"
+            build_this_version: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.python_3_11_4 == 'true' }}
 
     steps:
       - name: Checkout Repository
@@ -89,6 +107,7 @@ jobs:
           build-args: |
             PYTHON_VERSION=${{ env.PYTHON_VERSION }}
             PYTHON_VERSION_MM=${{ env.PYTHON_VERSION_MM }}
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true #TODO: remove this for production
+          # push: ${{ github.event_name != 'pull_request' }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache

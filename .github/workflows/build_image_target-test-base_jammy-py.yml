@@ -1,15 +1,22 @@
+# -------------------------------------------------------------------
+# This GitHub Action is set up to be triggered manually.
+# 
+# If you wish to build and push the Docker image, you must run this 
+# action explicitly from the GitHub Actions UI or via the GitHub API.
+# 
+# To run this action:
+# 1. Navigate to the "Actions" tab of the repository.
+# 2. Find and select this workflow from the list.
+# 3. Click on the "Run workflow" dropdown button.
+# 4. Choose the desired parameters and confirm to start the workflow.
+# 
+# Note: Automatic triggers (e.g., on push or pull request) have been 
+# disabled for this workflow. It will not run automatically upon code 
+# changes unless reconfigured.
+# -------------------------------------------------------------------
+
 name: Build and push Docker image 'target-test-base_jammy-py'
 on:
-  push:
-    branches:
-      - master
-    paths:
-      - 'target-test-base_jammy-py/**'
-      - '.github/workflows/build_image_target-test-base_jammy-py.yml'
-  pull_request:
-    paths:
-      - 'target-test-base_jammy-py/**'
-      - '.github/workflows/build_image_target-test-base_jammy-py.yml'
   workflow_dispatch:
     inputs:
       python_3_8_17:
@@ -21,17 +28,17 @@ on:
         description: 'Build Ubuntu 22.04 (Jammy) with Python 3.9.17'
         required: false
         type: boolean
-        default: false
+        default: true
       python_3_10_12:
         description: 'Build Ubuntu 22.04 (Jammy) with Python 3.10.12'
         required: false
         type: boolean
-        default: false
+        default: true
       python_3_11_4:
         description: 'Build Ubuntu 22.04 (Jammy) with Python 3.11.4'
         required: false
         type: boolean
-        default: false
+        default: true
 
 # Kill running actions pipeline (for PR) when new changes are pushed to PR
 concurrency:
@@ -44,37 +51,16 @@ env:
   IMAGE_ARCHS: linux/amd64,linux/arm
 
 jobs:
-  setup-matrix:
-    runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
-    steps:
-    - name: Set Matrix
-      id: set-matrix
-      run: |
-        matrix='["3.8.17"]'
-        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-          if [ "${{ github.event.inputs.python_3_9_17 }}" = "true" ]; then
-            matrix=$(echo $matrix | jq ' . + ["3.9.17"] ')
-          fi
-          if [ "${{ github.event.inputs.python_3_10_12 }}" = "true" ]; then
-            matrix=$(echo $matrix | jq ' . + ["3.10.12"] ')
-          fi
-          if [ "${{ github.event.inputs.python_3_11_4 }}" = "true" ]; then
-            matrix=$(echo $matrix | jq ' . + ["3.11.4"] ')
-          fi
-        fi
-        echo $matrix
-        echo "::set-output name=matrix::$matrix"
-      shell: bash
-
-
   build-and-push-docker-image:
-    needs: setup-matrix
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python_version: ${{fromJson(needs.setup-matrix.outputs.matrix)}}
+        python_version: ["3.8.17", "3.9.17", "3.10.12", "3.11.4"]
+        exclude:
+          - python_version: ${{ github.event.inputs.python_3_8_17 == 'false' && '3.8.17' || 'dummy' }}
+          - python_version: ${{ github.event.inputs.python_3_9_17 == 'false' && '3.9.17' || 'dummy' }}
+          - python_version: ${{ github.event.inputs.python_3_10_12 == 'false' && '3.10.12' || 'dummy' }}
+          - python_version: ${{ github.event.inputs.python_3_11_4 == 'false' && '3.11.4' || 'dummy' }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
@@ -121,6 +107,6 @@ jobs:
           build-args: |
             PYTHON_VERSION=${{ env.PYTHON_VERSION }}
             PYTHON_VERSION_MM=${{ env.PYTHON_VERSION_MM }}
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache

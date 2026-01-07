@@ -1,0 +1,51 @@
+name: Build and push Docker image 'idf-python-wheels-legacy'
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'idf_python_wheels_legacy/**'
+      - '.github/workflows/build_image_idf_python_wheels_legacy.yml'
+
+  pull_request:
+    paths:
+      - 'idf_python_wheels_legacy/**'
+      - '.github/workflows/build_image_idf_python_wheels_legacy.yml'
+
+env:
+  IMAGE_DIR: ./idf_python_wheels_legacy
+  IMAGE_NAME: ghcr.io/${{ github.repository }}/idf-python-wheels-armv7l-legacy
+  IMAGE_TAG: v1
+  IMAGE_ARCHS: linux/arm
+
+jobs:
+  create-docker-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHRC
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{github.actor}}
+          password: ${{secrets.GITHUB_TOKEN}}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{env.IMAGE_DIR}}
+          platforms: ${{env.IMAGE_ARCHS}}
+          tags: ${{env.IMAGE_NAME}}:${{env.IMAGE_TAG}}
+          # Push package to registry only when merged to master
+          push: ${{ github.event_name != 'pull_request' }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

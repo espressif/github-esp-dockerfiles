@@ -1,21 +1,16 @@
 # Minimal manylinux-compatible Docker image for ARMv7l (32-bit ARM)
-# Based on Debian Buster for older glibc compatibility (2.28)
+# Based on Debian Bullseye for older glibc compatibility (2.31)
 # Use this for compatibility with older systems (e.g., older Raspberry Pi OS)
 
-FROM arm32v7/debian:buster
+FROM arm32v7/debian:bullseye
 
 LABEL maintainer="Espressif Systems"
-LABEL description="Minimal manylinux-compatible environment for building Python wheels on ARMv7l (legacy glibc 2.28)"
+LABEL description="Minimal manylinux-compatible environment for building Python wheels on ARMv7l (legacy glibc 2.31)"
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive \
     LC_ALL=C.UTF-8 \
     LANG=C.UTF-8
-
-# Buster is EOL - archive repositories
-RUN sed -i 's|deb.debian.org|archive.debian.org|g' /etc/apt/sources.list && \
-    sed -i 's|security.debian.org|archive.debian.org|g' /etc/apt/sources.list && \
-    sed -i '/buster-updates/d' /etc/apt/sources.list
 
 # Install build dependencies and Python versions
 RUN apt-get update && apt-get install -y \
@@ -54,10 +49,11 @@ RUN apt-get update && apt-get install -y \
     # dbus-python dependencies
     libdbus-1-dev \
     libdbus-glib-1-dev \
-    # Pillow dependencies
+    # Pillow dependencies (include both -dev and runtime libs for auditwheel)
     libjpeg-dev \
     libpng-dev \
     libtiff-dev \
+    libtiff5 \
     libfreetype6-dev \
     liblcms2-dev \
     libwebp-dev \
@@ -66,7 +62,9 @@ RUN apt-get update && apt-get install -y \
     libharfbuzz-dev \
     libxcb1-dev \
     libxau-dev \
-    # Python from Debian repos (Buster provides 3.7)
+    brotli \
+    libbrotli-dev \
+    # Python from Debian repos (Bullseye provides 3.9)
     python3 \
     python3-dev \
     python3-venv \
@@ -82,12 +80,12 @@ RUN python3 -m pip install --no-cache-dir --upgrade \
 
 # Set up manylinux platform tag
 # This makes auditwheel recognize the environment as manylinux-compatible
-# Buster has glibc 2.28, so we use manylinux_2_28
-RUN echo "manylinux_2_28_armv7l" > /etc/system-release-cpe
+# Bullseye has glibc 2.31, so we use manylinux_2_31
+RUN echo "manylinux_2_31_armv7l" > /etc/system-release-cpe
 
 # Create a marker file for manylinux detection
 RUN mkdir -p /opt/python && \
-    echo "manylinux_2_28_armv7l" > /opt/python/PLATFORM
+    echo "manylinux_2_31_armv7l" > /opt/python/PLATFORM
 
 # Set working directory
 WORKDIR /workspace
@@ -96,4 +94,3 @@ WORKDIR /workspace
 ENV PATH="/usr/bin:${PATH}"
 
 CMD ["/bin/bash"]
-

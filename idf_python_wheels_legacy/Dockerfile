@@ -75,9 +75,8 @@ RUN apt-get update && apt-get install -y \
 
 # Build and install patchelf >= 0.14 from source (Bullseye has 0.12 which is too old for auditwheel)
 RUN cd /tmp && \
-    git clone https://github.com/NixOS/patchelf.git && \
+    git clone --depth 1 --branch 0.18.0 https://github.com/NixOS/patchelf.git && \
     cd patchelf && \
-    git checkout 0.18.0 && \
     ./bootstrap.sh && \
     ./configure && \
     make && \
